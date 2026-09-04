@@ -12,6 +12,8 @@ use rex_file;
  * the same ground truth - without this, showing analysis results would mean
  * blocking the whole page request on however long the actual PHPStan run
  * takes, which can be minutes on a larger codebase.
+ *
+ * @phpstan-import-type PhpstanRunResult from RexResultsRenderer
  */
 final class RexStanRunStore
 {
@@ -49,9 +51,9 @@ final class RexStanRunStore
     /**
      * Reads the last completed background-run result.
      *
-     * @return array<string, mixed>|string|null null if no cached result exists yet;
-     *                                           a string if PHPStan's output could not
-     *                                           be parsed as JSON (mirrors RexStan::runFromWeb())
+     * @return PhpstanRunResult|string|null null if no cached result exists yet;
+     *                                       a string if PHPStan's output could not
+     *                                       be parsed as JSON (mirrors RexStan::runFromWeb())
      */
     public static function readCachedResult()
     {

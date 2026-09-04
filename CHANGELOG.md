@@ -17,10 +17,17 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - `RexStan::startBackgroundWebAnalysis()` spawnt den PHPStan-Lauf detached (Unix: `shell_exec('(...) &')`, Windows: `start /B`); Ergebnis wird atomar (erst in eine Temp-Datei, dann per `mv`/`move`) an seinen finalen Pfad geschrieben, damit ein Poller nie eine unvollständige Ergebnisdatei zu sehen bekommt.
   - `RexResultsRenderer::renderAnalysisBody()` extrahiert die bisher direkt in `pages/analysis.php` liegende Rendering-Logik in eine wiederverwendbare Methode, die sowohl beim normalen Seitenaufruf (gecachtes Ergebnis) als auch von der Ajax-Statusabfrage (frisches Ergebnis) genutzt wird.
 
+- **Prioritäts-Zusammenfassung**: Über der Datei-für-Datei-Liste zeigt eine kompakte Tabelle die Anzahl der Probleme gebündelt nach Kritikalität – 🔴 Kritisch (Typ-/Nullsicherheit, potenzielle Laufzeitfehler, SQL-Risiken), 🟡 Code-Style (Strict-Rules-Präferenzen) und 🔵 Wartbarkeit (fehlende Typangaben, unbenutzter Code, Komplexität, totes Code) – jeweils mit Anzahl und Prozentanteil. Bei mehreren tausend Einzelmeldungen (z. B. Level 10 mit allen Zusatzregelsets) ist die reine Datei-Liste sonst kaum überblickbar.
+  - Neue Klasse `RexStanCategorizer` (`lib/RexStanCategorizer.php`) ordnet jeden PHPStan-Fehler-Identifier einer der drei Kategorien zu. Die Zuordnung ist zwangsläufig eine Wertung (PHPStans JSON-Ausgabe kennt selbst keine Kritikalität, nur den Regel-Identifier) – ein nicht gelisteter/zukünftiger Identifier landet standardmäßig in "Kritisch", damit nichts Unbekanntes fälschlich als "nur Stil" versteckt wird.
+  - Basiert auf den 86 tatsächlich in diesem Projekt beobachteten Identifiern (Level 10 + strict-rules + deprecation-rules + cognitive-complexity + dead-code + type-perfect), nicht auf Vermutungen.
+
 ### 🧹 Code Quality
 
 - `RexStan::runFromWeb()`'s Interpretation der rohen PHPStan-Ausgabe (JSON vs. Klartext-Fehler) in `RexStan::interpretAnalysisOutput()` extrahiert, damit sowohl der synchrone als auch der neue Hintergrund-Pfad dieselbe Logik nutzen.
 - PSR-3-Log-Interpolation statt String-Konkatenation in `RexStan::interpretAnalysisOutput()`.
+- `RexResultsRenderer::renderAnalysisBody()` (vorher eine einzelne, tief verschachtelte Methode mit hoher kognitiver Komplexität) in mehrere fokussierte private Methoden aufgeteilt (je ein Zweig: String-Fehler, Laufzeit-Fehler, Erfolg, Datei-Liste).
+- `PhpstanRunResult`/`PhpstanFileResult`/`PhpstanMessage`-Typen über `@phpstan-import-type` zwischen `RexStan`/`RexResultsRenderer`/`RexStanRunStore` geteilt, statt überall lose `array<string, mixed>` zu verwenden (bewusst lose belassen nur dort, wo PHPStans eigene externe `--error-format=json`-Ausgabe defensiv geprüft wird).
+- Kleinere Strict-Rules-Korrekturen in `lib/Api/AnalysisApi.php` (`use function rex_request;` statt `use rex_request;`, strikte Vergleiche statt impliziter Bool-Umwandlung).
 
 ### ⚠️ Bekannte Einschränkungen
 
